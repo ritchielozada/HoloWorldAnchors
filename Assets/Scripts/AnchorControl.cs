@@ -2,15 +2,17 @@
 using System.Collections;
 using System.Text;
 using HoloToolkit.Unity;
+using UnityEngine.VR.WSA.Persistence;
 
 public class AnchorControl : MonoBehaviour
 {
     public GameObject PlacementObject;
     public string SavedAnchorFriendlyName;
     private WorldAnchorManager anchorManager;
+    private WorldAnchorStore anchorStore;
     private SpatialMappingManager spatialMappingManager;
     private TextToSpeechManager ttsMgr;
-
+    
     private enum ControlState
     {
         WaitingForAnchorStore,
@@ -44,41 +46,32 @@ public class AnchorControl : MonoBehaviour
             Debug.LogError("This script expects that you have a SpatialMappingManager component in your scene.");
         }
 
-        //if (anchorManager != null && spatialMappingManager != null)
-        //{
-        //    anchorManager.AttachAnchor(this.gameObject, SavedAnchorFriendlyName);
-        //    ttsMgr.SpeakText("Anchor Locked");
-        //}
-        //else
-        //{
-        //    ttsMgr.SpeakText("Cannot Lock Anchor");
-        //}
-
-        
+        WorldAnchorStore.GetAsync(AnchorStoreReady);
     }
 
-    // Update is called once per frame
+    void AnchorStoreReady(WorldAnchorStore store)
+    {
+        anchorStore = store;
+        curentState = ControlState.CheckAnchorStatus;
+        Debug.Log("Anchor Store Ready");        
+    }
+    
     void Update()
     {
         switch (curentState)
-        {
-            case ControlState.WaitingForAnchorStore:
-                if (anchorManager.AnchorStore != null)
-                {
-                    Debug.Log("Anchor Store Ready");
-                    curentState = ControlState.CheckAnchorStatus;
-                }
-                break;
+        {            
             case ControlState.CheckAnchorStatus:
-                if (anchorManager.AnchorStore.anchorCount > 0)
+                var cnt = anchorStore.anchorCount;                
+                if (cnt > 0)
                 {
-                    var sb = new StringBuilder("Found Anchors:");                                        
-                    foreach (var ids in anchorManager.AnchorStore.GetAllIds())
+                    var sb = new StringBuilder("Found Anchor" + (cnt == 1 ? " " : "s "));
+                    foreach (var ids in anchorStore.GetAllIds())
                     {
                         sb.Append(ids);
                     }
                     Debug.Log(sb.ToString());
                     ttsMgr.SpeakText(sb.ToString());
+                    DisplayUI.Instance.AppendText(sb.ToString());
                 }
                 else
                 {
@@ -129,7 +122,6 @@ public class AnchorControl : MonoBehaviour
             ttsMgr.SpeakText("Not in Anchor Placement State");
             return;
         }
-
         
         // Add world anchor when object placement is done.
         anchorManager.AttachAnchor(PlacementObject, SavedAnchorFriendlyName);

@@ -46,6 +46,7 @@ namespace HoloToolkit.Sharing
         void SendJoinEvent(User user)
         {
             Debug.Log("User joining session: " + user.GetID());
+            DisplayUI.Instance.AppendText("User joining session: " + user.GetID());
 
             EventHandler<SessionJoinedEventArgs> joinEvent = SessionJoined;
             if (joinEvent != null)
